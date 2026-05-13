@@ -15,6 +15,7 @@ typedef struct Node {
 typedef struct Dict {
   Node *root;
   size_t size;
+  KeyComparator compare;
 } Dict;
 
 /* --- Helpers --- */
@@ -133,16 +134,20 @@ void dict_value_free(DictValue *value) {
 
 /* --- Dict --- */
 
-Dict *dict_new(void) {
+static Dict *dict_new_custom(KeyComparator comp) {
   Dict *dict = malloc(sizeof(Dict));
   if (!dict)
     return NULL;
 
   dict->root = NULL;
   dict->size = 0;
-
+  dict->compare = comp;
   return dict;
 }
+
+Dict *dict_new(void) { return dict_new_custom(strcmp); }
+
+Dict *dict_new_case_insensitive(void) { return dict_new_custom(strcasecmp); }
 
 void dict_free(Dict *dict) {
   if (dict == NULL) {
@@ -155,13 +160,37 @@ void dict_free(Dict *dict) {
 }
 
 void dict_clear(Dict *dict) {
-  if (dict == NULL || dict->root == NULL)
+  if (dict == NULL) {
+    errno = EINVAL;
+    return;
+  }
+
+  if (dict->root == NULL)
     return;
 
   node_destroy_recursive(dict->root);
 
   dict->root = NULL;
   dict->size = 0;
+}
+
+/* --- Traversal / Insertion / Deletion --- */
+
+DictValue *dict_get(Dict *dict, const char *key) {
+  if (!dict || !key)
+    return NULL;
+
+  Node *current = dict->root;
+
+  while (current) {
+    int rc = dict->compare(key, current->key);
+
+    if (rc == 0)
+      return current->value;
+
+    current = (rc < 0) ? current->left : current->right;
+  }
+  return NULL;
 }
 
 /* --- Tree Helpers --- */

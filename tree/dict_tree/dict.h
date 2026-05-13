@@ -35,9 +35,12 @@ typedef struct Dict Dict;
 typedef void (*DictIterFunc)(const char *key, DictValue *value,
                              void *user_data);
 
+typedef int (*KeyComparator)(const char *k1, const char *k2);
+
 /* --- Lifecycle --- */
 
 Dict *dict_new(void);
+Dict *dict_new_case_insensitive(void);
 void dict_free(Dict *dict);
 void dict_clear(Dict *dict);
 
